@@ -1,39 +1,36 @@
 #!/usr/bin/python3
-"""
-Contains a Flask web application API
-"""
-from flask import Flask, jsonify, make_response
+"""main app setup for Flask instance in REST API"""
+from flask import Flask, jsonify
 from models import storage
+from flask_cors import CORS
 from api.v1.views import app_views
-from flask_cors import CORS, cross_origin
-from os import getenv
+import os
 
 
 app = Flask(__name__)
 app.register_blueprint(app_views)
-CORS(app, resources={r"/*": {"origins": "0.0.0.0"}})
+CORS(app, resources={r"/api/v1/*": {"origins": "*"}})
+
+
+def page_not_found(e):
+    """404 errors that returns a JSON-formatted"""
+    return jsonify({'error': 'Not found'}), 404
 
 
 @app.teardown_appcontext
-def teardown_session(exception):
-    """ Closes storage session """
+def teardown_appcontext(exc=None):
+    """teardown of app context of flask"""
     storage.close()
 
 
-@app.errorhandler(404)
-def not_found(error):
-    """ Returns JSON response with 404 status """
-    return make_response(
-        jsonify({
-            "error": "Not found"
-        }), 404
-    )
-
-
 if __name__ == '__main__':
-    HBNB_API_HOST = getenv('HBNB_API_HOST')
-    HBNB_API_PORT = getenv('HBNB_API_PORT')
-
-    host = '0.0.0.0' if not HBNB_API_HOST else HBNB_API_HOST
-    port = 5000 if not HBNB_API_PORT else HBNB_API_PORT
+    """run your Flask server"""
+    app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
+    app.register_error_handler(404, page_not_found)
+    host = os.environ.get('HBNB_API_HOST')
+    port = os.environ.get('HBNB_API_PORT')
+    if host is None:
+        host = '0.0.0.0'
+    if port is None:
+        port = 5000
     app.run(host=host, port=port, threaded=True)
